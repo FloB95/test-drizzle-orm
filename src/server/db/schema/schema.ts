@@ -24,6 +24,8 @@ export const shortUrls = pgTable("link", {
   updatedAt: timestamp("updatedAt").defaultNow(),
 });
 
+// Schema for short url
+export const shortUrlSchema = createSelectSchema(shortUrls);
 
 // Schema for inserting a Url - can be used to validate API requests
 export const insertUrlSchema = createInsertSchema(shortUrls).omit({ uid: true });
@@ -34,8 +36,6 @@ export const selectUrlSchema = createSelectSchema(shortUrls, {
   code: (schema) => schema.code.optional(),
 }).pick({uid: true, code: true});
 
-
- 
 // // Schema for updating a Url - can be used to validate API requests
 export const updateUrlSchema = createInsertSchema(shortUrls).pick({ url: true });
 

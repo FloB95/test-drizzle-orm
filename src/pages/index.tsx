@@ -1,33 +1,62 @@
 "use client";
 
+import { faker } from "@faker-js/faker";
 import Head from "next/head";
-import { useState } from "react";
+import { type TypeOf } from "zod";
 import { Button } from "~/components/ui/button";
+import { sleep } from "~/lib/utils";
+import {
+  type shortUrlSchema,
+  type insertUrlSchema,
+} from "~/server/db/schema/schema";
 
 import { api } from "~/utils/api";
 
+type NewShortUrl = TypeOf<typeof insertUrlSchema>;
+type ShortUrl = TypeOf<typeof shortUrlSchema>;
+
 const AddButton = () => {
-  const [loading, setLoading] = useState(false);
   const utils = api.useContext();
-  const m = api.shortUrls.add.useMutation();
-  const handleAdd = () => {
-    setLoading(true);
-    m.mutate(
-      {},
-      {
-        onSuccess: (data) => {
-          // setLoading(false);
-          void utils.shortUrls.invalidate();
+
+  const m = api.shortUrls.add.useMutation({
+    onMutate: (data: NewShortUrl) => {
+      const previousData =
+        utils.shortUrls.getAll.getData() ?? ([] as ShortUrl[]);
+      utils.shortUrls.getAll.setData(
+        undefined,
+        (oldQueryData: ShortUrl[] | undefined) => {
+          console.log(oldQueryData);
+          return [...(oldQueryData ?? []), data] as ShortUrl[];
         },
-        onError: (err) => {
-          // setLoading(false);
-        }
-      },
-    );
+      );
+      return { previousData };
+    },
+    onSuccess: (data) => {
+      // console.log("onSuccess", data);
+    },
+    onError: (err, _newTodo, context) => {
+      // Rollback to the previous value if mutation fails
+      utils.shortUrls.getAll.setData(undefined, context?.previousData);
+    },
+    onSettled: () => {
+      void utils.shortUrls.getAll.invalidate();
+    },
+  });
+
+  const handleAdd = () => {
+    const newShortUrl: NewShortUrl = {
+      code: faker.string.alphanumeric({
+        length: 5,
+      }),
+      url: faker.internet.url(),
+      createdBy: faker.string.uuid(),
+    };
+
+    m.mutate(newShortUrl);
   };
 
   return (
-    <Button onClick={handleAdd} variant="secondary" size="lg" loading={loading}>
+    <Button onClick={handleAdd} variant="secondary" size="lg">
       test
     </Button>
   );
@@ -83,7 +112,7 @@ export default function Home() {
               <>
                 {hello.data.map((shortUrl) => {
                   return (
-                    <li key={shortUrl.uid}>
+                    <li key={shortUrl.code}>
                       {shortUrl.code}
                       <DeleteButton uid={shortUrl.uid} />
                     </li>
