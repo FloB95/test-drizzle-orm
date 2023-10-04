@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import { text, pgTableCreator, timestamp, varchar, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { type TypeOf } from "zod";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -41,3 +42,8 @@ export const updateUrlSchema = createInsertSchema(shortUrls).pick({ url: true })
 
 // // Schema for deleting a Url - can be used to validate API requests
 export const deleteUrlSchema = createSelectSchema(shortUrls).pick({ uid: true });
+
+
+export type ShortUrl = TypeOf<typeof shortUrlSchema>;
+export type NewShortUrl = TypeOf<typeof insertUrlSchema>;
+export type DeleteShortUrlParams = TypeOf<typeof deleteUrlSchema>;

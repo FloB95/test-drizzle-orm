@@ -1,98 +1,10 @@
-"use client";
-
-import { faker } from "@faker-js/faker";
 import Head from "next/head";
-import { type TypeOf } from "zod";
-import { Button } from "~/components/ui/button";
-import { sleep } from "~/lib/utils";
-import {
-  type shortUrlSchema,
-  type insertUrlSchema,
-} from "~/server/db/schema/schema";
+import { AddButton, DeleteButton } from "~/components/urlShortener/MutationButton";
 
 import { api } from "~/utils/api";
 
-type NewShortUrl = TypeOf<typeof insertUrlSchema>;
-type ShortUrl = TypeOf<typeof shortUrlSchema>;
-
-const AddButton = () => {
-  const utils = api.useContext();
-
-  const m = api.shortUrls.add.useMutation({
-    onMutate: (data: NewShortUrl) => {
-      const previousData =
-        utils.shortUrls.getAll.getData() ?? ([] as ShortUrl[]);
-      utils.shortUrls.getAll.setData(
-        undefined,
-        (oldQueryData: ShortUrl[] | undefined) => {
-          console.log(oldQueryData);
-          return [...(oldQueryData ?? []), data] as ShortUrl[];
-        },
-      );
-      return { previousData };
-    },
-    onSuccess: (data) => {
-      // console.log("onSuccess", data);
-    },
-    onError: (err, _newTodo, context) => {
-      // Rollback to the previous value if mutation fails
-      utils.shortUrls.getAll.setData(undefined, context?.previousData);
-    },
-    onSettled: () => {
-      void utils.shortUrls.getAll.invalidate();
-    },
-  });
-
-  const handleAdd = () => {
-    const newShortUrl: NewShortUrl = {
-      code: faker.string.alphanumeric({
-        length: 5,
-      }),
-      url: faker.internet.url(),
-      createdBy: faker.string.uuid(),
-    };
-
-    m.mutate(newShortUrl);
-  };
-
-  return (
-    <Button onClick={handleAdd} variant="secondary" size="lg">
-      test
-    </Button>
-  );
-};
-
-const DeleteButton = ({ uid }: { uid: string }) => {
-  const utils = api.useContext();
-  const m = api.shortUrls.delete.useMutation();
-
-  const handleDelete = () => {
-    m.mutate(
-      {
-        uid,
-      },
-      {
-        onSuccess: (data) => {
-          void utils.shortUrls.invalidate();
-        },
-      },
-    );
-  };
-
-  return (
-    <Button
-      onClick={handleDelete}
-      className="ml-4"
-      variant="secondary"
-      size="icon"
-    >
-      x
-    </Button>
-  );
-};
-
 export default function Home() {
-  const hello = api.shortUrls.getAll.useQuery(undefined, {
+  const shortUrls = api.shortUrls.getAll.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
 
@@ -108,12 +20,12 @@ export default function Home() {
           <h1 className="text-6xl text-white">Welcome to tRPC</h1>
           <AddButton />
           <ul className="text-2xl text-white">
-            {hello.data ? (
+            {shortUrls.data ? (
               <>
-                {hello.data.map((shortUrl) => {
+                {shortUrls.data.map((shortUrl) => {
                   return (
                     <li key={shortUrl.code}>
-                      {shortUrl.code}
+                      {shortUrl.code} {"->"} {shortUrl.url}
                       <DeleteButton uid={shortUrl.uid} />
                     </li>
                   );
